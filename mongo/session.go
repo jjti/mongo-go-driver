@@ -138,6 +138,8 @@ type Session interface {
 	// if the session has ended.
 	AdvanceOperationTime(*primitive.Timestamp) error
 
+	SetSessionID(bsoncore.Document)
+
 	session()
 }
 
@@ -163,6 +165,10 @@ var _ XSession = &sessionImpl{}
 // ClientSession implements the XSession interface.
 func (s *sessionImpl) ClientSession() *session.Client {
 	return s.clientSession
+}
+
+func (s *sessionImpl) SetSessionID(id bsoncore.Document) {
+	s.clientSession.SessionID = id
 }
 
 // ID implements the Session interface.
