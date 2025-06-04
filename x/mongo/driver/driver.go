@@ -267,3 +267,10 @@ const (
 func (rm RetryMode) Enabled() bool {
 	return rm == RetryOnce || rm == RetryOncePerCommand || rm == RetryContext
 }
+
+const skipSession = "skipSessionKey"
+
+// WithSkipSession bypasses implicit session creation from clients. You don't want this.
+func WithSkipSession(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipSession, struct{}{})
+}

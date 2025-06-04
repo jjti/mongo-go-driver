@@ -1082,9 +1082,9 @@ func (op Operation) createWireMessage(
 	// or less than 6, use OP_QUERY. Otherwise, use OP_MSG.
 	if desc.Kind != description.LoadBalanced && op.ServerAPI == nil &&
 		(desc.WireVersion == nil || desc.WireVersion.Max < wiremessage.OpmsgWireVersion) {
-		return op.createQueryWireMessage(maxTimeMS, dst, desc)
+		return op.createQueryWireMessage(maxTimeMS, dst, desc, ctx.Value(skipSession) != nil)
 	}
-	return op.createMsgWireMessage(ctx, maxTimeMS, dst, desc, conn)
+	return op.createMsgWireMessage(ctx, maxTimeMS, dst, desc, conn, ctx.Value(skipSession) != nil)
 }
 
 func (op Operation) addBatchArray(dst []byte) []byte {
@@ -1096,7 +1096,7 @@ func (op Operation) addBatchArray(dst []byte) []byte {
 	return dst
 }
 
-func (op Operation) createQueryWireMessage(maxTimeMS uint64, dst []byte, desc description.SelectedServer) ([]byte, startedInformation, error) {
+func (op Operation) createQueryWireMessage(maxTimeMS uint64, dst []byte, desc description.SelectedServer, skipSession bool) ([]byte, startedInformation, error) {
 	var info startedInformation
 	flags := op.secondaryOK(desc)
 	var wmindex int32
@@ -1139,9 +1139,11 @@ func (op Operation) createQueryWireMessage(maxTimeMS uint64, dst []byte, desc de
 		return dst, info, err
 	}
 
-	dst, err = op.addSession(dst, desc)
-	if err != nil {
-		return dst, info, err
+	if !skipSession {
+		dst, err = op.addSession(dst, desc)
+		if err != nil {
+			return dst, info, err
+		}
 	}
 
 	dst = op.addClusterTime(dst, desc)
@@ -1169,7 +1171,7 @@ func (op Operation) createQueryWireMessage(maxTimeMS uint64, dst []byte, desc de
 }
 
 func (op Operation) createMsgWireMessage(ctx context.Context, maxTimeMS uint64, dst []byte, desc description.SelectedServer,
-	conn Connection,
+	conn Connection, skipSession bool,
 ) ([]byte, startedInformation, error) {
 	var info startedInformation
 	var flags wiremessage.MsgFlag
@@ -1205,9 +1207,12 @@ func (op Operation) createMsgWireMessage(ctx context.Context, maxTimeMS uint64, 
 	if err != nil {
 		return dst, info, err
 	}
-	dst, err = op.addSession(dst, desc)
-	if err != nil {
-		return dst, info, err
+
+	if !skipSession {
+		dst, err = op.addSession(dst, desc)
+		if err != nil {
+			return dst, info, err
+		}
 	}
 
 	dst = op.addClusterTime(dst, desc)
